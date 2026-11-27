@@ -5,7 +5,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from evaluate import ChannelBank, checked_subset, error_db, evaluate_case, gram, summarize, synthetic_estimate
+from evaluate import (ChannelBank, checked_subset, error_db, evaluate_case, gram,
+                      summarize, synthetic_estimate, paired_cluster_ci,
+                      check_paper_dimensions, check_paper_test_rows, measure_selector)
 
 
 def capacity(g, rho, subset, k):
@@ -51,7 +53,49 @@ class TestDualCSI(unittest.TestCase):
     def test_site_macro_not_sample_average(self):
         rows = [dict(method='m', snr_db=0., site_id=s, NCR=x, capacity=x, greedy_capacity=1., actual_error_db=-20.)
                 for s, x in [(0, .6), (0, .6), (0, .6), (1, 1.)]]
-        self.assertAlmostEqual(summarize(rows)['m']['NCR'], .8)
+        summary = summarize(rows)['m']
+        self.assertAlmostEqual(summary['NCR'], .7)
+        self.assertAlmostEqual(summary['site_macro_NCR'], .8)
+
+    def test_paired_cluster_ci(self):
+        rows = []
+        for site in (1,2,3):
+            for snr in (0.,5.):
+                for name,ncr in (('A',.9),('B',.8)):
+                    rows.append(dict(method=name,site_id=site,snr_db=snr,
+                                     sample_id=site*10+int(snr),NCR=ncr))
+        res = paired_cluster_ci(rows,'A','B',100,42)
+        self.assertAlmostEqual(res['paired_mean_NCR_gain'],.1)
+        np.testing.assert_allclose(res['ci95'],[.1,.1])
+        self.assertEqual(res,paired_cluster_ci(rows,'A','B',100,42))
+        with self.assertRaises(ValueError):
+            paired_cluster_ci(rows[:-1],'A','B',100,42)
+
+    def test_benchmark_dimensions_and_test_grid(self):
+        check_paper_dimensions(np.zeros((1,16,256)),16,'fullwave_response')
+        with self.assertRaises(ValueError):
+            check_paper_dimensions(np.zeros((2,16,256)),16,'fullwave_response')
+        rows = [dict(method=method,base_sample_id=i,site_id=i,snr_db=float(snr))
+                for i in range(100) for snr in (0,5,10,15,20)
+                for method in ('Capacity-Greedy','ICSM-AS')]
+        check_paper_test_rows(rows,'fullwave_response')
+        with self.assertRaises(ValueError):
+            check_paper_test_rows(rows[:-1],'fullwave_response')
+
+    def test_timing_scope(self):
+        calls = []
+        def read_estimate():
+            calls.append('read')
+            return np.ones((1,2,3),complex)
+        def choose(g):
+            calls.append('select')
+            np.testing.assert_allclose(g,gram(np.ones((1,2,3),complex)))
+        def sync():
+            calls.append('sync')
+        result = measure_selector(read_estimate,choose,sync,1,2)
+        self.assertEqual(calls,['read','select','sync','read','select','sync','sync','read','select','sync'])
+        self.assertEqual(len(result),2)
+        self.assertTrue(all(x>=0 for x in result))
 
     def test_bank_joins_by_id_not_row_position(self):
         with tempfile.TemporaryDirectory() as tmp:

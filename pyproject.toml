@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "icsm-as-framework"
+version = "0.1.0"
+description = "Research code framework for ICSM-AS wideband MIMO antenna selection"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pandas>=2.0", "h5py>=3.10", "scipy>=1.10", "torch==2.4.0", "transformers>=4.45.0", "safetensors>=0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,64 @@
+# Paper-aligned task profiles; provide datasets and model files externally.
+statistical_wideband:
+  n_tx: 128
+  n_rx: 16
+  n_f: 32
+  n_sel: 16
+  snr_db: [0, 5, 10, 15, 20]
+  pcr_reference: identity
+  learning_rate: 1.0e-5
+  epochs: 50
+  patience: 50
+  batch_size: 8
+  seeds: [42, 2026, 1709]
+# Supplementary single-validated-frequency full-wave-informed surrogate; not a broadband full-wave measurement.
+fullwave_response:
+  n_tx: 256
+  n_rx: 16
+  n_f: 1
+  n_sel: 16
+  pcr_reference: validated_complex_T_or_calibrated_Z
+  learning_rate: 1.0e-5
+  epochs: 50
+  patience: 50
+  batch_size: 8
+  seeds: [42, 2026, 1709]
+reviewer_comparator_protocol:
+  seed: 42
+  epochs: 50
+  statistical_learning_rate: 1.0e-5
+  fullwave_learning_rate: 1.0e-5
+  batch_size: 8
+  patience: 50
+optimizer:
+  name: AdamW
+  weight_decay: 1.0e-4
+loss:
+  alpha_hq: 0.5
+  lambda_relation: 0.2
+  lambda_marginal: 1.0
+  lambda_rank: 0.1
+  lambda_membership: 1.0
+  lambda_regression: 1.0
+  nll_ablation: false
+model:
+  qwen: Qwen2-0.5B
+  freeze_qwen: true
+  adapter_dim: 64
+  graph_heads: 4
+  relation_rank: 64
+
+# Formal evaluation protocol; actual nominal estimates must be supplied.
+evaluation:
+  selector_csi: estimated
+  capacity_csi: true
+  nominal_error_db: null
+  robustness_error_db: [-30, -20, -10]
+  require_nonzero_error: true
+  normalization: Capacity-Greedy
+  aggregation: equal_snr_matched_decisions
+  cluster: site_or_scene
+  wb_test_channels: 2000
+  wb_test_sites: 100
+  fw_test_scenes: 100
+  timing_batch_size: 1
